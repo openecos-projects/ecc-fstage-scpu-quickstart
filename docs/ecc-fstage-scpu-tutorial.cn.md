@@ -89,7 +89,7 @@ echo "$ECC_BIN"
 - `rtl = ["rtl/NPC.f"]`：入口 filelist；
 - `rtl/NPC.f`：其中的 `NPC.sv`，相对路径以 filelist 所在的 `rtl/` 目录为基准；
 - `[pdk.overrides]`：technology LEF、标准单元 LEF 和 Liberty 文件；
-- `[flow]`：当前使用的 `syn_sta` 流程预设。
+- `[flow]`：当前使用的 `rtl2gds` 流程预设。
 
 `check` 只检查配置、文件、PDK 和流程前置条件，不执行完整综合，也不会生成综合网表。
 检查失败时先修复错误，再执行 `run`。`--plain` 只改变终端输出格式，不改变检查内容。
@@ -105,23 +105,26 @@ echo "$ECC_BIN"
 1. 创建独立的运行目录；
 2. 保存 `ecc.toml`、`NPC.f`、`NPC.sv` 等输入快照；
 3. 写入解析后的设计参数、PDK 路径和流程状态；
-4. 生成 Yosys 脚本，读取 RTL、展开顶层、执行综合和网表检查；
-5. 保存日志、脚本、综合网表、统计数据和报告。
+4. 生成 Yosys 和后端步骤脚本，读取 RTL、展开顶层、执行综合、布局布线和 DRC；
+5. 保存日志、脚本、综合网表、版图中间结果、GDS 和报告。
 
-当前配置的 `flow.preset = "syn_sta"` 重点是综合和网表级检查，不默认执行完整布局布线。
-一次成功运行的主要目录如下：
+当前配置的 `flow.preset = "rtl2gds"` 会依次执行综合、布局布线、时钟树综合、DRC 和
+填充单元等步骤。一次成功运行的主要目录如下：
 
 ```text
 runs/first/
 ├── origin/                  # 本次运行使用的输入快照
 ├── home/                    # 参数和流程元数据
 ├── log/                     # ECC 总日志
-└── Synthesis_yosys/
-    ├── script/              # Yosys 脚本
-    ├── log/                 # 综合日志
-    ├── output/              # 综合网表
-    ├── report/              # 检查和统计报告
-    └── feature/             # JSON 结果数据
+├── Synthesis_yosys/         # Yosys 综合
+├── Floorplan_ecc/           # Floorplan
+├── fixFanout_ecc/           # 扇出修复
+├── place_dreamplace/        # 布局
+├── CTS_ecc/                 # 时钟树综合
+├── legalization_dreamplace/ # 合法化
+├── route_ecc/               # 布线
+├── drc_ecc/                 # DRC
+└── filler_ecc/              # 填充单元和最终 GDS
 ```
 
 默认情况下，ECC 不会覆盖已经存在的 `runs/first/`。下一次实验使用新的 run id，能够
@@ -169,7 +172,7 @@ runs/first/
 3. 查看连续赋值和组合逻辑，了解输出如何由输入和内部寄存器产生。
 
 这是 firtool 生成的 SystemVerilog，内部临时信号较多。第一次练习不需要重构 RTL，
-先观察“RTL 输入 -> ECC 综合 -> 网表产物”的完整闭环。
+先观察“RTL 输入 -> 综合 -> 布局布线 -> GDS”的完整闭环。
 
 ## 4. 理解 ecc.toml
 
@@ -188,7 +191,7 @@ name = "ics55"
 root = ""
 
 [flow]
-preset = "syn_sta"
+preset = "rtl2gds"
 run = "default"
 ```
 
@@ -199,7 +202,7 @@ run = "default"
 - `clock_port` 对应 RTL 的 `clock` 输入端口。
 - `frequency_mhz` 是时序约束目标，不代表设计一定达到该频率。
 - `pdk.root = ""` 表示使用安装脚本设置的 ICS55 PDK 环境。
-- `syn_sta` 适合第一次练习；它将重点放在综合和网表检查。
+- `rtl2gds` 会从 RTL 一直执行到布局布线和 GDS 输出。
 
 `[pdk.overrides]` 进一步列出标准单元 LEF、Liberty 和 `dont_use` 单元。它们使用环境
 变量拼接路径，因此不需要把某台机器上的绝对路径写入配置。
@@ -210,7 +213,7 @@ run = "default"
 "$ECC_BIN" check --plain
 ```
 
-## 5. 查看综合结果
+## 5. 查看 RTL-to-GDS 结果
 
 README 流程完成后，先确认状态：
 
@@ -218,10 +221,10 @@ README 流程完成后，先确认状态：
 "$ECC_BIN" status --run-id first --plain
 ```
 
-然后查看实际生成的文件：
+然后查看实际生成的 GDS 和其他产物：
 
 ```bash
-find runs/first/Synthesis_yosys -maxdepth 3 -type f -print | sort
+find runs/first -type f \( -iname '*.gds' -o -iname '*.gds.gz' \) -print | sort
 ```
 
 重点关注：
@@ -231,6 +234,7 @@ runs/first/Synthesis_yosys/output/*_Synthesis.v.gz
 runs/first/Synthesis_yosys/output/*_Synthesis_sim.v.gz
 runs/first/Synthesis_yosys/report/Synthesis_check.rpt
 runs/first/Synthesis_yosys/feature/Synthesis_stat.json
+runs/first/filler_ecc/output/*_filler.gds
 ```
 
 文件名会随 ECC 版本和配置细节变化；目录和后缀比完整文件名更稳定。若安装了 `jq`，
@@ -240,9 +244,14 @@ runs/first/Synthesis_yosys/feature/Synthesis_stat.json
 jq . runs/first/Synthesis_yosys/feature/Synthesis_stat.json
 ```
 
-如果 `Synthesis` 显示 `Success` 且 `output/` 中有非空网表，说明第一次综合闭环已完成。
-当前 `syn_sta` 流程不会执行布局布线，因此不会生成 GDS；`*_Synthesis_sim.v.gz` 是
-网表级仿真输入，不是 GDS 文件。
+如果综合、布局、时钟树、布线、DRC 和填充步骤均显示 `Success`，并且最终输出目录中
+存在非空 `.gds` 文件，说明 RTL-to-GDS 闭环已完成。最终 GDS 通常位于：
+
+```text
+runs/first/filler_ecc/output/*_filler.gds
+```
+
+`*_Synthesis_sim.v.gz` 仍然只是网表级仿真输入；GDS 是 `filler_ecc/output/` 中的版图文件。
 
 ## 6. 做一次独立实验
 

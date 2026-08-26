@@ -11,7 +11,7 @@ root = ""
 
 [flow]
 # preset: rtl2gds | rcx | harden | syn_sta
-preset = "syn_sta"
+preset = "rtl2gds"
 run = "default"
 
 [pdk.overrides]

@@ -37,15 +37,15 @@ source scripts/install-release-deps.sh
 
 ## 结果
 
-运行结果保存在 `runs/first/`。成功时，`Synthesis` 步骤为 `Success`，并生成综合网表
-和报告。当前流程停在 Yosys 综合/网表检查阶段，不会生成 GDS：
+运行结果保存在 `runs/first/`。成功时，综合、布局布线和 DRC 等步骤均为 `Success`，并
+生成最终 GDS：
 
 ```text
-runs/first/Synthesis_yosys/
-├── output/*_Synthesis.v.gz
-├── output/*_Synthesis_sim.v.gz
-├── report/Synthesis_check.rpt
-└── feature/Synthesis_stat.json
+runs/first/
+├── Synthesis_yosys/output/*_Synthesis.v.gz
+├── Floorplan_ecc/output/*_Floorplan.gds
+├── route_ecc/output/*_route.gds
+└── filler_ecc/output/*_filler.gds  # 最终 GDS
 ```
 
 ## 继续学习
