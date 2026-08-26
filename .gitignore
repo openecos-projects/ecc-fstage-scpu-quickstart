@@ -1,2 +1,4 @@
 runs/
 *.log
+.ecc-deps/
+.ecc-release-env

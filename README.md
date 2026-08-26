@@ -13,6 +13,8 @@ ecc-fstage-scpu-quickstart/
 │   ├── NPC.sv               # 顶层 module NPC
 │   └── NPC.f                # RTL filelist
 ├── constraints/             # 约束扩展目录
+├── scripts/
+│   └── install-release-deps.sh # 一键下载 ECC、Yosys 和 ICS55 PDK
 ├── docs/
 │   ├── ecc-cli-guide.cn.md
 │   └── ecc-fstage-scpu-tutorial.cn.md
@@ -22,170 +24,59 @@ ecc-fstage-scpu-quickstart/
 ## 1. 基于 ECC release 的最短流程
 
 如果只是想运行 ECC，不需要编译源码。当前推荐的 Linux x86_64 release 是
-`v0.1.0-alpha.10`。release 包只提供 ECC CLI，Yosys 和 ICS55 PDK 需要另外准备。
+`v0.1.0-alpha.10`。release 包本身只提供 ECC CLI，本教程提供脚本自动下载匹配的
+Yosys 和 ICS55 PDK。
 
-### 1.1 下载 ECC CLI
+### 1.1 一键下载全部依赖
 
-```bash
-ECC_BUNDLE=/path/to/ecc-release
-mkdir -p "$ECC_BUNDLE"
-
-curl -fL \
-  https://github.com/openecos-projects/ecc/releases/download/v0.1.0-alpha.10/ecc-cli-linux-x86_64.tar.gz \
-  -o /tmp/ecc-cli-linux-x86_64.tar.gz
-
-tar -xzf /tmp/ecc-cli-linux-x86_64.tar.gz -C "$ECC_BUNDLE"
-ECC_BIN=$(find "$ECC_BUNDLE" -type f -name ecc -perm -111 -print -quit)
-test -x "$ECC_BIN"
-"$ECC_BIN" --version
-```
-
-可选地校验下载文件：
+在本目录执行下面一条命令。默认下载约 1.5 GB 文件，依赖会放在 `.ecc-deps/`，不会写入
+Git；脚本可以重复执行，已完成的下载会复用。
 
 ```bash
-printf '%s  %s\n' \
-  fc3daaca24dddb04ba3490329042f52da05190da03c3831042293dd0cbffdca6 \
-  /tmp/ecc-cli-linux-x86_64.tar.gz | sha256sum -c -
+source scripts/install-release-deps.sh
 ```
 
-### 1.2 准备 Yosys
+脚本完成后会自动设置 `ECC_BIN`、`YOSYS_ROOT`、`CHIPCOMPILER_OSS_CAD_DIR`、
+`YOSYS_PLUGINPATH` 和 `CHIPCOMPILER_ICS55_PDK_ROOT`。如果脚本是直接执行而不是
+`source`，请按提示加载 `.ecc-release-env`。
 
-ECC release 不内置 Yosys。可以使用系统中已有的 Yosys，或设置一个独立的 Yosys
-目录：
+如需更换版本，可以在执行前覆盖脚本变量，例如：
 
 ```bash
-YOSYS_ROOT=/path/to/yosys
-export CHIPCOMPILER_OSS_CAD_DIR="$YOSYS_ROOT"
-export YOSYS_PLUGINPATH="$YOSYS_ROOT/share/yosys/plugins"
-export PATH="$YOSYS_ROOT/bin:$PATH"
-
-yosys -V
+ECC_VERSION=v0.1.0-alpha.10 \
+YOSYS_RELEASE_TAG=2026-08-08 \
+YOSYS_RELEASE_DATE=20260808 \
+PDK_VERSION=v1.10.102 \
+source scripts/install-release-deps.sh
 ```
 
-如果 `yosys` 已经在 `PATH` 中，也可以先直接执行 `yosys -V`；ECC 会尝试从
-`PATH` 查找它。
+更换 ECC 版本时，请同时设置该版本 release 页面提供的 `ECC_SHA256`；否则脚本会提示
+并跳过 ECC 压缩包校验。
 
-### 1.3 准备 ICS55 PDK
-
-```bash
-export CHIPCOMPILER_ICS55_PDK_ROOT=/path/to/icsprout55-pdk
-test -f "$CHIPCOMPILER_ICS55_PDK_ROOT/prtech/techLEF/N551P6M_ecos.lef"
-```
-
-### 1.4 运行本教程设计
+### 1.2 准备本教程项目
 
 `QUICKSTART_ROOT` 是本快速上手仓库的路径，不是 ECC 源码路径：
 
 ```bash
 QUICKSTART_ROOT=/path/to/ecc-fstage-scpu-quickstart
 cd "$QUICKSTART_ROOT"
+```
+
+下一节会运行设计并检查结果。
+
+更多命令和输出格式见 [ECC 指令列表与使用指南](docs/ecc-cli-guide.cn.md)。
+
+## 2. 校验并运行
+
+完成上面的 release 配置后，可以继续使用同一个 `ECC_BIN` 变量运行项目：
+
+```bash
+cd "$QUICKSTART_ROOT"
 
 "$ECC_BIN" check --plain
 "$ECC_BIN" run --run-id first --plain
 "$ECC_BIN" status --run-id first --plain
 "$ECC_BIN" log --run-id first
-```
-
-运行结果位于 `runs/first/`。最小成功标准是 `Synthesis` 步骤为
-`Success`，并生成 `Synthesis_yosys/output/*_Synthesis.v.gz`。
-
-更多命令和输出格式见 [ECC 指令列表与使用指南](docs/ecc-cli-guide.cn.md)。
-
-## 2. 安装 ECC
-
-ECC 要求 Python 3.11 或更高版本。推荐使用 `uv` 安装依赖；Nix 是可选的环境管理工具。
-`ECC_ROOT` 必须指向 ECC 主仓库，而不是本快速上手仓库。先准备 ECC 主仓库并设置路径：
-
-```bash
-export ECC_ROOT=/path/to/ecc
-cd "$ECC_ROOT"
-```
-
-如果还没有 ECC 主仓库，可以先克隆：
-
-```bash
-git clone https://github.com/openecos-projects/ecc.git "$ECC_ROOT"
-cd "$ECC_ROOT"
-```
-
-### 方式 A：使用仓库开发环境
-
-如果系统安装了 Nix，可以先进入开发 shell：
-
-```bash
-nix develop
-```
-
-没有 Nix 也可以跳过这一步，直接执行依赖同步：
-
-```bash
-uv sync --no-build-isolation-package ecc-dreamplace \
-  --no-build-isolation-package ecc-tools-bin --verbose
-```
-
-同步完成后，用虚拟环境中的 ECC 验证安装：
-
-```bash
-uv run --project "$ECC_ROOT" ecc --version
-```
-
-如果希望激活虚拟环境后直接使用 `ecc`：
-
-```bash
-source .venv/bin/activate
-ecc --version
-```
-
-### 方式 B（可选）：使用 ECC 主仓库的 release 环境
-
-快速上手仓库本身不包含 `.envrc`。只有在 `ECC_ROOT` 指向 ECC 主仓库、且该主仓库
-提供 `.envrc` 时，才需要安装 `direnv`：
-
-```bash
-cd "$ECC_ROOT"
-test -f .envrc
-direnv allow
-direnv exec "$ECC_ROOT" ecc --version
-```
-
-如果没有 `.envrc` 或不想安装 `direnv`，跳过方式 B，使用方式 A 的
-`uv run --project "$ECC_ROOT" ecc`。
-
-### 不使用 direnv 的运行方式
-
-方式 A 安装完成后，直接用 `uv run --project "$ECC_ROOT" ecc`，不需要 `direnv`：
-
-```bash
-cd "$ECC_ROOT/tutorials/ecc-fstage-scpu-quickstart"
-uv run --project "$ECC_ROOT" ecc check --plain
-uv run --project "$ECC_ROOT" ecc run --run-id first --plain
-uv run --project "$ECC_ROOT" ecc status --run-id first --plain
-```
-
-### PDK
-
-ECC 的 RTL 综合和后端流程需要 ICS55 PDK。设置 PDK 根目录：
-
-```bash
-export CHIPCOMPILER_ICS55_PDK_ROOT="$ECC_ROOT/pdk/icsprout55-pdk"
-test -f "$CHIPCOMPILER_ICS55_PDK_ROOT/prtech/techLEF/N551P6M_ecos.lef"
-```
-
-完整依赖、PDK 和故障排查说明见
-[ECC 指令列表与使用指南](docs/ecc-cli-guide.cn.md#1-安装与前置条件)。
-
-## 3. 校验并运行
-
-进入本目录后，项目路径可以省略。下面使用不依赖 `direnv` 的
-`uv run --project "$ECC_ROOT" ecc`：
-
-```bash
-cd "$ECC_ROOT/tutorials/ecc-fstage-scpu-quickstart"
-
-uv run --project "$ECC_ROOT" ecc check --plain
-uv run --project "$ECC_ROOT" ecc run --run-id first --plain
-uv run --project "$ECC_ROOT" ecc status --run-id first --plain
-uv run --project "$ECC_ROOT" ecc log --run-id first
 ```
 
 预期结果是 `Synthesis` 步骤成功，并在以下目录生成综合网表和报告：
@@ -210,12 +101,12 @@ run = "full"
 然后使用新的运行名：
 
 ```bash
-uv run --project "$ECC_ROOT" ecc check --plain
-uv run --project "$ECC_ROOT" ecc run --run-id full --plain
-uv run --project "$ECC_ROOT" ecc status --run-id full --plain
+"$ECC_BIN" check --plain
+"$ECC_BIN" run --run-id full --plain
+"$ECC_BIN" status --run-id full --plain
 ```
 
-## 4. 继续学习
+## 3. 继续学习
 
 - [ECC 指令列表与使用指南](docs/ecc-cli-guide.cn.md)：完整 CLI、参数、输出格式和故障排查。
 - [NPC 手把手教程](docs/ecc-fstage-scpu-tutorial.cn.md)：从读 RTL、写 filelist 到参数实验、报告分析和后端扩展。
