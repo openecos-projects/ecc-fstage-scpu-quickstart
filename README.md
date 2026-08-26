@@ -19,7 +19,79 @@ ecc-fstage-scpu-quickstart/
 └── runs/                    # ECC 生成的工作区，不纳入版本控制
 ```
 
-## 1. 安装 ECC
+## 1. 基于 ECC release 的最短流程
+
+如果只是想运行 ECC，不需要编译源码。当前推荐的 Linux x86_64 release 是
+`v0.1.0-alpha.10`。release 包只提供 ECC CLI，Yosys 和 ICS55 PDK 需要另外准备。
+
+### 1.1 下载 ECC CLI
+
+```bash
+ECC_BUNDLE=/path/to/ecc-release
+mkdir -p "$ECC_BUNDLE"
+
+curl -fL \
+  https://github.com/openecos-projects/ecc/releases/download/v0.1.0-alpha.10/ecc-cli-linux-x86_64.tar.gz \
+  -o /tmp/ecc-cli-linux-x86_64.tar.gz
+
+tar -xzf /tmp/ecc-cli-linux-x86_64.tar.gz -C "$ECC_BUNDLE"
+ECC_BIN=$(find "$ECC_BUNDLE" -type f -name ecc -perm -111 -print -quit)
+test -x "$ECC_BIN"
+"$ECC_BIN" --version
+```
+
+可选地校验下载文件：
+
+```bash
+printf '%s  %s\n' \
+  fc3daaca24dddb04ba3490329042f52da05190da03c3831042293dd0cbffdca6 \
+  /tmp/ecc-cli-linux-x86_64.tar.gz | sha256sum -c -
+```
+
+### 1.2 准备 Yosys
+
+ECC release 不内置 Yosys。可以使用系统中已有的 Yosys，或设置一个独立的 Yosys
+目录：
+
+```bash
+YOSYS_ROOT=/path/to/yosys
+export CHIPCOMPILER_OSS_CAD_DIR="$YOSYS_ROOT"
+export YOSYS_PLUGINPATH="$YOSYS_ROOT/share/yosys/plugins"
+export PATH="$YOSYS_ROOT/bin:$PATH"
+
+yosys -V
+```
+
+如果 `yosys` 已经在 `PATH` 中，也可以先直接执行 `yosys -V`；ECC 会尝试从
+`PATH` 查找它。
+
+### 1.3 准备 ICS55 PDK
+
+```bash
+export CHIPCOMPILER_ICS55_PDK_ROOT=/path/to/icsprout55-pdk
+test -f "$CHIPCOMPILER_ICS55_PDK_ROOT/prtech/techLEF/N551P6M_ecos.lef"
+```
+
+### 1.4 运行本教程设计
+
+`QUICKSTART_ROOT` 是本快速上手仓库的路径，不是 ECC 源码路径：
+
+```bash
+QUICKSTART_ROOT=/path/to/ecc-fstage-scpu-quickstart
+cd "$QUICKSTART_ROOT"
+
+"$ECC_BIN" check --plain
+"$ECC_BIN" run --run-id first --plain
+"$ECC_BIN" status --run-id first --plain
+"$ECC_BIN" log --run-id first
+```
+
+运行结果位于 `runs/first/`。最小成功标准是 `Synthesis` 步骤为
+`Success`，并生成 `Synthesis_yosys/output/*_Synthesis.v.gz`。
+
+更多命令和输出格式见 [ECC 指令列表与使用指南](docs/ecc-cli-guide.cn.md)。
+
+## 2. 安装 ECC
 
 ECC 要求 Python 3.11 或更高版本。推荐使用 `uv` 安装依赖；Nix 是可选的环境管理工具。
 `ECC_ROOT` 必须指向 ECC 主仓库，而不是本快速上手仓库。先准备 ECC 主仓库并设置路径：
@@ -102,7 +174,7 @@ test -f "$CHIPCOMPILER_ICS55_PDK_ROOT/prtech/techLEF/N551P6M_ecos.lef"
 完整依赖、PDK 和故障排查说明见
 [ECC 指令列表与使用指南](docs/ecc-cli-guide.cn.md#1-安装与前置条件)。
 
-## 2. 校验并运行
+## 3. 校验并运行
 
 进入本目录后，项目路径可以省略。下面使用不依赖 `direnv` 的
 `uv run --project "$ECC_ROOT" ecc`：
@@ -143,7 +215,7 @@ uv run --project "$ECC_ROOT" ecc run --run-id full --plain
 uv run --project "$ECC_ROOT" ecc status --run-id full --plain
 ```
 
-## 3. 继续学习
+## 4. 继续学习
 
 - [ECC 指令列表与使用指南](docs/ecc-cli-guide.cn.md)：完整 CLI、参数、输出格式和故障排查。
 - [NPC 手把手教程](docs/ecc-fstage-scpu-tutorial.cn.md)：从读 RTL、写 filelist 到参数实验、报告分析和后端扩展。
