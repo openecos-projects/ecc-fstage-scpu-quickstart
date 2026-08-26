@@ -38,6 +38,121 @@ $ECC_ROOT
 本教程默认使用 `syn_sta` 预设。它首先执行 Yosys 综合，并尽力生成网表级 STA
 报告；要执行布局布线和 GDS 生成，见第 9 节。
 
+## README 流程逐步解析
+
+README 的命令默认都在本快速上手仓库根目录执行。下面解释这几条命令各自做了什么，
+以及它们之间的关系。快速上手使用 ECC release，不需要编译 ECC 源码，也不需要
+`.envrc` 或 `direnv`。
+
+### 1. 安装脚本：准备三个外部组件
+
+```bash
+source scripts/install-release-deps.sh
+```
+
+这里的 `source` 很重要：脚本不仅下载文件，还要把环境变量设置到当前终端，后面的
+`$ECC_BIN` 才能直接使用。脚本按以下顺序工作：
+
+1. 检查当前系统是否为 Linux x86_64，并确认 `curl`、`tar`、`git`、`make`、`bzip2`
+   等基础命令可用。
+2. 下载 ECC release 的 Linux CLI 压缩包，校验默认 release 的 SHA-256，并将可执行文件
+   解压到 `.ecc-deps/`。
+3. 下载固定版本的 OSS CAD Suite，从中找到 `bin/yosys`，并将 Yosys 根目录记录下来。
+   ECC 后续通过 `CHIPCOMPILER_OSS_CAD_DIR` 和 `YOSYS_PLUGINPATH` 找到 Yosys 及插件。
+4. 浅克隆 ICS55 PDK 仓库，再调用 PDK 自带的 `make unzip` 下载并解压标准单元 Liberty、
+   GDS 等大文件。technology LEF 来自 PDK 仓库本身。
+5. 检查 technology LEF 是否存在，生成被 Git 忽略的 `.ecc-release-env`，并在当前 shell
+   中导出 ECC、Yosys 和 PDK 路径。
+
+`.ecc-deps/` 和 `.ecc-release-env` 都被 `.gitignore` 排除。脚本可以重复执行：已有压缩包
+会复用，已经解压完成的 ECC 和 Yosys 不会再次解压，PDK 已有标准单元库时也会跳过下载。
+整个过程只准备工具和环境，不会运行 RTL 综合，因此此时还不会出现 `runs/first/`。
+
+### 2. `check`：只验证项目，不执行完整流程
+
+```bash
+"$ECC_BIN" check --plain
+```
+
+ECC 将当前目录作为项目目录，读取根目录下的 `ecc.toml`，然后依次解析：
+
+- `[design]` 中的顶层名 `NPC`、时钟端口 `clock` 和目标频率；
+- `rtl = ["rtl/NPC.f"]` 指向的 filelist；
+- `rtl/NPC.f` 中的 `NPC.sv`。filelist 内的相对路径以 filelist 所在的 `rtl/` 目录为基准；
+- `[pdk.overrides]` 中引用的 technology LEF、标准单元 LEF 和 Liberty 文件；
+- `[flow]` 中的 `syn_sta` 流程预设以及参数类型。
+
+`check` 只做配置、路径、文件和流程前置条件检查，不创建综合网表。成功后通常会看到
+检查通过的文本结果；失败时应先修复检查错误，再执行 `run`。`--plain` 只影响终端输出
+格式，让结果适合直接阅读或复制到日志，不会改变检查内容。
+
+### 3. `run`：创建一次独立工作区并执行综合
+
+```bash
+"$ECC_BIN" run --run-id first --plain
+```
+
+这条命令使用项目配置中的 `syn_sta` 预设，并把本次运行命名为 `first`。ECC 会：
+
+1. 创建 `runs/first/`，避免把本次结果混入源码目录或其他实验。
+2. 保存 `origin/` 输入快照，包括 `ecc.toml`、`NPC.f` 和 `NPC.sv`。
+3. 将解析后的项目参数和 PDK 路径写入 `home/parameters.json` 等元数据文件。
+4. 生成 Yosys 脚本和步骤配置，执行 RTL 读取、顶层 elaboration、综合、网表检查和统计。
+5. 将每个步骤的状态、日志、脚本、网表和报告分别写入步骤目录。
+
+本项目的默认流程重点是 `Synthesis_yosys`。成功时最重要的产物是：
+
+```text
+runs/first/Synthesis_yosys/
+├── output/*_Synthesis.v.gz       # 综合后的网表
+├── output/*_Synthesis_sim.v.gz   # 用于网表级仿真的网表
+├── report/Synthesis_check.rpt    # 网表检查报告
+└── feature/Synthesis_stat.json   # 综合统计数据
+```
+
+`run` 默认不会覆盖已有的 `runs/first/`。如果要进行第二次实验，应使用新的 run id，
+以便保留可比较的结果；快速上手文档不建议在第一次练习中删除旧工作区。
+
+### 4. `status`：读取步骤状态
+
+```bash
+"$ECC_BIN" status --run-id first --plain
+```
+
+`status` 不会重新运行 ECC。它读取 `runs/first/home/flow.json` 以及步骤元数据，汇总
+当前运行是否完成、`Synthesis` 是否成功、每一步的开始/结束状态等信息。它适合在运行
+结束后快速确认结果，也适合长流程运行时反复查询。
+
+### 5. `log`：查看运行日志
+
+```bash
+"$ECC_BIN" log --run-id first
+```
+
+`log` 从该运行的日志目录读取 ECC 和步骤输出，默认展示日志索引或相应内容。需要定位
+综合问题时，先用 `status` 找到失败步骤，再到对应的
+`runs/first/Synthesis_yosys/log/` 和 `runs/first/log/` 查看详细记录。日志只读不会修改
+工作区；若要复现实验，应保留 `origin/`、`config/` 和 `log/` 一起检查。
+
+### 6. 四条命令的执行顺序
+
+这四条命令不是四种互相独立的安装方式，而是一条有先后关系的流水线：
+
+```text
+install-release-deps.sh
+        │  准备 ECC、Yosys、PDK 和当前 shell 环境
+        ▼
+check  ─┤  确认 ecc.toml、RTL、PDK 和流程可用
+        ▼
+run    ─┤  创建 runs/first 并执行 syn_sta
+        ├──────────────► status 读取步骤状态
+        └──────────────► log 读取执行日志
+```
+
+如果 `check` 失败，`run` 没有可靠的前置条件；应先根据错误修复文件或环境，再重新
+执行 `check`。如果 `run` 成功，`status` 和 `log` 只负责查看已经生成的结果，不会再次
+触发综合。
+
 ## 1. 先读懂 NPC.sv
 
 打开源文件：
