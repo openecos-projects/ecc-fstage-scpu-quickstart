@@ -20,6 +20,9 @@ $ECC_ROOT
 `evaluations/fstage-scpu`；教程会复制输入和配置到新的练习目录，不会修改已有
 评估结果。
 
+如果你是从 `ecc-fstage-scpu-quickstart` 仓库开始，配置和 RTL 已经在仓库根目录中，
+可以跳过第 3 节的复制步骤，直接从第 4 节检查 `ecc.toml`。
+
 ## 0. 你将完成什么
 
 完成后应能做到：
@@ -123,7 +126,7 @@ test -d "$CHIPCOMPILER_ICS55_PDK_ROOT/IP/STD_cell"
 两个 `test` 都没有输出且退出码为 0，表示基础路径存在。ECC 的内建
 `ics55` PDK 会从该目录寻找 technology LEF、标准单元 LEF 和 Liberty 文件。
 
-## 3. 创建一个干净的练习项目
+## 3. 从 ECC 主仓库创建一个干净的练习项目
 
 不要直接在 `evaluations/fstage-scpu` 下运行教程，因为那里已经有历史
 `runs` 和面积 sweep 结果。创建新目录并复制必要输入：
