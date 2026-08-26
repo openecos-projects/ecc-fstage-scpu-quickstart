@@ -24,7 +24,7 @@ ecc-fstage-scpu-quickstart/
 ## 使用流程
 
 以下命令均在本仓库根目录执行。安装脚本会下载 ECC release、Yosys 和 ICS55 PDK，
-并在当前终端准备好运行环境。
+并在当前终端准备好运行环境。安装脚本支持 Bash 和 Zsh。
 
 ```bash
 source scripts/install-release-deps.sh
@@ -34,6 +34,17 @@ source scripts/install-release-deps.sh
 "$ECC_BIN" status --run-id first --plain
 "$ECC_BIN" log --run-id first
 ```
+
+默认从 GitHub 下载。GitHub 连接较慢时，可以让所有 GitHub 下载和 PDK 克隆通过
+gh-proxy：
+
+```bash
+source scripts/install-release-deps.sh --download-source gh-proxy
+```
+
+切回直连时使用 `--download-source github`。自定义代理地址时追加
+`--gh-proxy-url https://example.com/`。也可以通过 `ECC_DOWNLOAD_SOURCE` 和
+`GH_PROXY_URL` 环境变量配置；命令行参数的优先级更高。
 
 ## 结果
 

@@ -56,14 +56,26 @@ source scripts/install-release-deps.sh
 `ECC_BIN` 才会留在当前 shell 中。
 
 下载过程在脚本内部的子 shell 中执行。即使平台检查或下载失败，脚本也只返回非零状态，
-不会退出正在使用的 Bash；成功时才把生成的环境文件加载回当前 shell。
+不会退出正在使用的 Bash 或 Zsh；成功时才把生成的环境文件加载回当前 shell。
+
+默认下载源为 GitHub。网络环境不适合直连 GitHub 时，可以切换到 gh-proxy；ECC、
+OSS CAD Suite、PDK 仓库及 PDK release 附件会统一走代理：
+
+```bash
+source scripts/install-release-deps.sh --download-source gh-proxy
+```
+
+切回直连时使用 `--download-source github`。自建 gh-proxy 可以通过
+`--gh-proxy-url https://example.com/` 指定，该地址需要兼容“代理基址 + 完整 GitHub
+URL”格式。也可以通过 `ECC_DOWNLOAD_SOURCE` 和 `GH_PROXY_URL` 环境变量配置；命令行
+参数的优先级更高。
 
 脚本依次完成以下动作：
 
 1. 检查 Linux x86_64 平台和 `curl`、`tar`、`git`、`make`、`bzip2`、`sha256sum` 等基础命令。
 2. 下载 ECC release CLI，校验默认 release 的 SHA-256，并解压到 `.ecc-deps/`。
-3. 下载 OSS CAD Suite，找到其中的 `bin/yosys`，配置 Yosys 根目录和插件目录。
-4. 克隆 ICS55 PDK，并调用 PDK 自带的 `make unzip` 下载标准单元 Liberty、GDS 等大文件。
+3. 下载并校验 OSS CAD Suite，找到其中的 `bin/yosys`，配置 Yosys 根目录和插件目录。
+4. 克隆 ICS55 PDK，下载并校验 PDK release 附件，再调用 PDK 自带的 `make unzip` 解压。
 5. 检查 technology LEF，生成 `.ecc-release-env`，并在当前终端设置 ECC、Yosys、PDK 路径。
 
 因此，`$ECC_BIN` 不是 ECC 的子命令，而是一个变量，值类似于 release 解压后的
