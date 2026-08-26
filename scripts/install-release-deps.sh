@@ -106,7 +106,7 @@ if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then
 else
   # Run a separate copy so strict options and failures cannot exit the
   # interactive shell that sourced this file. Load exports only on success.
-  if "$SCRIPT_DIR/$(basename "${BASH_SOURCE[0]}")" "$@"; then
+  if "$BASH" "${BASH_SOURCE[0]}" "$@"; then
     # shellcheck disable=SC1090
     source "$ENV_FILE"
   else
