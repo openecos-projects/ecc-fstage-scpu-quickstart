@@ -293,6 +293,20 @@ find "$CHIPCOMPILER_ICS55_PDK_ROOT/IP/STD_cell" -name '*.lib' -print | head
 
 如果缺少大文件，重新执行安装脚本；脚本会让 PDK 的 Makefile 补齐 release 文件。
 
+### `Yosys executable not found`
+
+如果错误信息中的 `CHIPCOMPILER_OSS_CAD_DIR` 包含字面量 `\"`，说明使用了旧版本脚本
+生成的环境文件。重新生成并加载环境文件：
+
+```bash
+source scripts/install-release-deps.sh
+test -x "$YOSYS_ROOT/bin/yosys"
+yosys -V
+```
+
+正常情况下，`CHIPCOMPILER_OSS_CAD_DIR` 会是一个不带多余反斜杠的目录路径，且
+`$YOSYS_ROOT/bin/yosys` 存在并可执行。
+
 ### `runs/first` 已存在
 
 不要直接删除已有结果。使用新的 run id，例如 `first-rerun`，保留两次实验的可比性：

@@ -90,10 +90,10 @@ install_release_deps() {
 export QUICKSTART_ROOT=$(printf '%q' "$QUICKSTART_ROOT")
 export ECC_BIN=$(printf '%q' "$ecc_bin")
 export YOSYS_ROOT=$(printf '%q' "$yosys_root")
-export CHIPCOMPILER_OSS_CAD_DIR=\"\$YOSYS_ROOT\"
-export YOSYS_PLUGINPATH=\"\$YOSYS_ROOT/share/yosys/plugins\"
+export CHIPCOMPILER_OSS_CAD_DIR="\$YOSYS_ROOT"
+export YOSYS_PLUGINPATH="\$YOSYS_ROOT/share/yosys/plugins"
 export CHIPCOMPILER_ICS55_PDK_ROOT=$(printf '%q' "$pdk_root")
-export PATH=\"\$YOSYS_ROOT/bin:\$PATH\"
+export PATH="\$YOSYS_ROOT/bin:\$PATH"
 EOF
 
   printf '\nECC:  %s\nYosys: %s\nPDK:   %s\n' "$ecc_bin" "$yosys_root" "$pdk_root"
