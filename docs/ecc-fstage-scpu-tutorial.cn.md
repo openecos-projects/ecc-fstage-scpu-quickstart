@@ -39,7 +39,7 @@ README 中的命令可以整段复制执行：
 source scripts/install-release-deps.sh
 
 "$ECC_BIN" check --plain
-"$ECC_BIN" run --run-id first --plain
+"$ECC_BIN" run --run-id first
 "$ECC_BIN" status --run-id first --plain
 "$ECC_BIN" log --run-id first
 ```
@@ -47,7 +47,7 @@ source scripts/install-release-deps.sh
 这不是四种不同的安装方式，而是一条有先后关系的流水线：
 
 ```text
-安装依赖 -> 检查项目 -> 执行综合 -> 查看状态和日志
+安装依赖 -> 检查项目 -> 执行 RTL-to-GDS -> 查看状态和日志
 ```
 
 ### 2.1 `source scripts/install-release-deps.sh`
@@ -97,8 +97,11 @@ echo "$ECC_BIN"
 ### 2.3 `run`：创建工作区并执行流程
 
 ```bash
-"$ECC_BIN" run --run-id first --plain
+"$ECC_BIN" run --run-id first
 ```
+
+不加 `--plain` 时，终端会实时显示当前步骤、日志摘要、完成状态和耗时；完整 RTL-to-GDS
+流程通常需要等待一段时间，看到步骤名称持续变化即可确认流程仍在运行。
 
 `--run-id first` 将本次实验命名为 `first`，结果写入 `runs/first/`。ECC 会：
 

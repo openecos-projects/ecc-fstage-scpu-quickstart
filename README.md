@@ -30,7 +30,7 @@ ecc-fstage-scpu-quickstart/
 source scripts/install-release-deps.sh
 
 "$ECC_BIN" check --plain
-"$ECC_BIN" run --run-id first --plain
+"$ECC_BIN" run --run-id first
 "$ECC_BIN" status --run-id first --plain
 "$ECC_BIN" log --run-id first
 ```
