@@ -4,10 +4,16 @@
 [NPC.sv](../rtl/NPC.sv) 作为待综合设计，从环境检查开始，
 创建一个独立 ECC 项目，完成配置校验和综合，再学习如何查看日志、配置和产物。
 
+本文中的 `ECC_ROOT` 表示 ECC 仓库根目录，请先替换为你的实际路径：
+
+```bash
+export ECC_ROOT=/path/to/ecc
+```
+
 教程假设仓库路径为：
 
 ```text
-/home/timmo/ecc
+$ECC_ROOT
 ```
 
 当前工作区已经提供了同一设计的参考项目
@@ -34,7 +40,7 @@
 打开源文件：
 
 ```bash
-cd /home/timmo/ecc
+cd "$ECC_ROOT"
 vi RTL/ysyx-cores/Fstage-scpu/NPC.sv
 ```
 
@@ -72,7 +78,7 @@ vi RTL/ysyx-cores/Fstage-scpu/NPC.sv
 本工作区的 `.envrc` 已配置 ECC、Yosys 和 ICS55 PDK。安装或启用 direnv 后：
 
 ```bash
-cd /home/timmo/ecc
+cd "$ECC_ROOT"
 direnv allow
 ecc --version
 ```
@@ -86,17 +92,17 @@ ecc 0.1.0a8
 如果 shell 没有自动加载环境，可以显式执行：
 
 ```bash
-direnv exec /home/timmo/ecc ecc --version
+direnv exec "$ECC_ROOT" ecc --version
 ```
 
-并用同样的 `direnv exec /home/timmo/ecc ecc ...` 前缀运行后续命令。
+并用同样的 `direnv exec "$ECC_ROOT" ecc ...` 前缀运行后续命令。
 
 ### 2.2 不使用当前 release 环境
 
 在没有可用 `ecc` 命令时，使用仓库开发环境：
 
 ```bash
-cd /home/timmo/ecc
+cd "$ECC_ROOT"
 nix develop
 uv sync --no-build-isolation-package ecc-dreamplace \
   --no-build-isolation-package ecc-tools-bin --verbose
@@ -108,7 +114,7 @@ uv run ecc --version
 ### 2.3 检查 ICS55 PDK
 
 ```bash
-export CHIPCOMPILER_ICS55_PDK_ROOT=/home/timmo/ecc/pdk/icsprout55-pdk
+export CHIPCOMPILER_ICS55_PDK_ROOT="$ECC_ROOT/pdk/icsprout55-pdk"
 
 test -f "$CHIPCOMPILER_ICS55_PDK_ROOT/prtech/techLEF/N551P6M_ecos.lef"
 test -d "$CHIPCOMPILER_ICS55_PDK_ROOT/IP/STD_cell"
@@ -123,7 +129,7 @@ test -d "$CHIPCOMPILER_ICS55_PDK_ROOT/IP/STD_cell"
 `runs` 和面积 sweep 结果。创建新目录并复制必要输入：
 
 ```bash
-cd /home/timmo/ecc
+cd "$ECC_ROOT"
 
 TUTORIAL_DIR="$PWD/tutorials/fstage-scpu"
 mkdir -p "$TUTORIAL_DIR/rtl" "$TUTORIAL_DIR/constraints" "$TUTORIAL_DIR/runs"

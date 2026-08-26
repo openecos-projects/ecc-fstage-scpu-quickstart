@@ -24,7 +24,8 @@ ecc-fstage-scpu-quickstart/
 在 ECC 主仓库中启用开发环境：
 
 ```bash
-cd /home/timmo/ecc
+export ECC_ROOT=/path/to/ecc
+cd "$ECC_ROOT"
 direnv allow
 ecc --version
 ```
@@ -32,13 +33,13 @@ ecc --version
 如果没有自动加载 `ecc`，可以把后续命令中的 `ecc` 替换为：
 
 ```bash
-direnv exec /home/timmo/ecc ecc
+direnv exec "$ECC_ROOT" ecc
 ```
 
 确认 ICS55 PDK 可用。当前配置默认从环境变量读取 PDK 根目录：
 
 ```bash
-export CHIPCOMPILER_ICS55_PDK_ROOT=/home/timmo/ecc/pdk/icsprout55-pdk
+export CHIPCOMPILER_ICS55_PDK_ROOT="$ECC_ROOT/pdk/icsprout55-pdk"
 test -f "$CHIPCOMPILER_ICS55_PDK_ROOT/prtech/techLEF/N551P6M_ecos.lef"
 ```
 
@@ -47,7 +48,7 @@ test -f "$CHIPCOMPILER_ICS55_PDK_ROOT/prtech/techLEF/N551P6M_ecos.lef"
 进入本目录后，项目路径可以省略：
 
 ```bash
-cd /home/timmo/ecc/tutorials/ecc-fstage-scpu-quickstart
+cd "$ECC_ROOT/tutorials/ecc-fstage-scpu-quickstart"
 
 ecc check --plain
 ecc run --run-id first --plain
