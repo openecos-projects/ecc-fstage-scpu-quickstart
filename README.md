@@ -7,7 +7,7 @@
 
 ```text
 ecc-fstage-scpu-quickstart/
-├── README.cn.md
+├── README.md
 ├── ecc.toml                 # 可直接运行的 ECC 项目配置
 ├── rtl/
 │   ├── NPC.sv               # 顶层 module NPC
