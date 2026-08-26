@@ -19,29 +19,70 @@ ecc-fstage-scpu-quickstart/
 └── runs/                    # ECC 生成的工作区，不纳入版本控制
 ```
 
-## 1. 准备环境
+## 1. 安装 ECC
 
-在 ECC 主仓库中启用开发环境：
+ECC 要求 Python 3.11 或更高版本。推荐使用 `uv` 安装依赖；Nix 是可选的环境管理工具。
+先准备 ECC 主仓库并设置路径：
 
 ```bash
 export ECC_ROOT=/path/to/ecc
 cd "$ECC_ROOT"
+```
+
+### 方式 A：使用仓库开发环境
+
+如果系统安装了 Nix，可以先进入开发 shell：
+
+```bash
+nix develop
+```
+
+没有 Nix 也可以跳过这一步，直接执行依赖同步：
+
+```bash
+uv sync --no-build-isolation-package ecc-dreamplace \
+  --no-build-isolation-package ecc-tools-bin --verbose
+```
+
+同步完成后，用虚拟环境中的 ECC 验证安装：
+
+```bash
+uv run ecc --version
+```
+
+如果希望激活虚拟环境后直接使用 `ecc`：
+
+```bash
+source .venv/bin/activate
+ecc --version
+```
+
+### 方式 B：使用仓库已有的 release 环境
+
+本工作区的 `.envrc` 已配置 release 版 ECC、Yosys 和 PDK。安装 `direnv` 后执行：
+
+```bash
 direnv allow
 ecc --version
 ```
 
-如果没有自动加载 `ecc`，可以把后续命令中的 `ecc` 替换为：
+如果 shell 没有自动加载环境，可以显式运行：
 
 ```bash
-direnv exec "$ECC_ROOT" ecc
+direnv exec "$ECC_ROOT" ecc --version
 ```
 
-确认 ICS55 PDK 可用。当前配置默认从环境变量读取 PDK 根目录：
+### PDK
+
+ECC 的 RTL 综合和后端流程需要 ICS55 PDK。设置 PDK 根目录：
 
 ```bash
 export CHIPCOMPILER_ICS55_PDK_ROOT="$ECC_ROOT/pdk/icsprout55-pdk"
 test -f "$CHIPCOMPILER_ICS55_PDK_ROOT/prtech/techLEF/N551P6M_ecos.lef"
 ```
+
+完整依赖、PDK 和故障排查说明见
+[ECC 指令列表与使用指南](docs/ecc-cli-guide.cn.md#1-安装与前置条件)。
 
 ## 2. 校验并运行
 
