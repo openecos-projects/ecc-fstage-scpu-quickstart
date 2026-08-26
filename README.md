@@ -22,10 +22,17 @@ ecc-fstage-scpu-quickstart/
 ## 1. 安装 ECC
 
 ECC 要求 Python 3.11 或更高版本。推荐使用 `uv` 安装依赖；Nix 是可选的环境管理工具。
-先准备 ECC 主仓库并设置路径：
+`ECC_ROOT` 必须指向 ECC 主仓库，而不是本快速上手仓库。先准备 ECC 主仓库并设置路径：
 
 ```bash
 export ECC_ROOT=/path/to/ecc
+cd "$ECC_ROOT"
+```
+
+如果还没有 ECC 主仓库，可以先克隆：
+
+```bash
+git clone https://github.com/openecos-projects/ecc.git "$ECC_ROOT"
 cd "$ECC_ROOT"
 ```
 
@@ -47,7 +54,7 @@ uv sync --no-build-isolation-package ecc-dreamplace \
 同步完成后，用虚拟环境中的 ECC 验证安装：
 
 ```bash
-uv run ecc --version
+uv run --project "$ECC_ROOT" ecc --version
 ```
 
 如果希望激活虚拟环境后直接使用 `ecc`：
@@ -57,19 +64,30 @@ source .venv/bin/activate
 ecc --version
 ```
 
-### 方式 B：使用仓库已有的 release 环境
+### 方式 B（可选）：使用 ECC 主仓库的 release 环境
 
-本工作区的 `.envrc` 已配置 release 版 ECC、Yosys 和 PDK。安装 `direnv` 后执行：
+快速上手仓库本身不包含 `.envrc`。只有在 `ECC_ROOT` 指向 ECC 主仓库、且该主仓库
+提供 `.envrc` 时，才需要安装 `direnv`：
 
 ```bash
+cd "$ECC_ROOT"
+test -f .envrc
 direnv allow
-ecc --version
+direnv exec "$ECC_ROOT" ecc --version
 ```
 
-如果 shell 没有自动加载环境，可以显式运行：
+如果没有 `.envrc` 或不想安装 `direnv`，跳过方式 B，使用方式 A 的
+`uv run --project "$ECC_ROOT" ecc`。
+
+### 不使用 direnv 的运行方式
+
+方式 A 安装完成后，直接用 `uv run --project "$ECC_ROOT" ecc`，不需要 `direnv`：
 
 ```bash
-direnv exec "$ECC_ROOT" ecc --version
+cd "$ECC_ROOT/tutorials/ecc-fstage-scpu-quickstart"
+uv run --project "$ECC_ROOT" ecc check --plain
+uv run --project "$ECC_ROOT" ecc run --run-id first --plain
+uv run --project "$ECC_ROOT" ecc status --run-id first --plain
 ```
 
 ### PDK
@@ -86,15 +104,16 @@ test -f "$CHIPCOMPILER_ICS55_PDK_ROOT/prtech/techLEF/N551P6M_ecos.lef"
 
 ## 2. 校验并运行
 
-进入本目录后，项目路径可以省略：
+进入本目录后，项目路径可以省略。下面使用不依赖 `direnv` 的
+`uv run --project "$ECC_ROOT" ecc`：
 
 ```bash
 cd "$ECC_ROOT/tutorials/ecc-fstage-scpu-quickstart"
 
-ecc check --plain
-ecc run --run-id first --plain
-ecc status --run-id first --plain
-ecc log --run-id first
+uv run --project "$ECC_ROOT" ecc check --plain
+uv run --project "$ECC_ROOT" ecc run --run-id first --plain
+uv run --project "$ECC_ROOT" ecc status --run-id first --plain
+uv run --project "$ECC_ROOT" ecc log --run-id first
 ```
 
 预期结果是 `Synthesis` 步骤成功，并在以下目录生成综合网表和报告：
@@ -119,9 +138,9 @@ run = "full"
 然后使用新的运行名：
 
 ```bash
-ecc check --plain
-ecc run --run-id full --plain
-ecc status --run-id full --plain
+uv run --project "$ECC_ROOT" ecc check --plain
+uv run --project "$ECC_ROOT" ecc run --run-id full --plain
+uv run --project "$ECC_ROOT" ecc status --run-id full --plain
 ```
 
 ## 3. 继续学习

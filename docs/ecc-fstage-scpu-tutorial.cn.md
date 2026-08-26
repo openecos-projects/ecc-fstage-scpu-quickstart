@@ -76,43 +76,33 @@ vi RTL/ysyx-cores/Fstage-scpu/NPC.sv
 
 ## 2. 检查工具和 PDK
 
-### 2.1 使用当前仓库的开发环境
+### 2.1 不使用 direnv（推荐）
 
-本工作区的 `.envrc` 已配置 ECC、Yosys 和 ICS55 PDK。安装或启用 direnv 后：
-
-```bash
-cd "$ECC_ROOT"
-direnv allow
-ecc --version
-```
-
-预期能看到类似：
-
-```text
-ecc 0.1.0a8
-```
-
-如果 shell 没有自动加载环境，可以显式执行：
-
-```bash
-direnv exec "$ECC_ROOT" ecc --version
-```
-
-并用同样的 `direnv exec "$ECC_ROOT" ecc ...` 前缀运行后续命令。
-
-### 2.2 不使用当前 release 环境
-
-在没有可用 `ecc` 命令时，使用仓库开发环境：
+快速上手仓库不包含 `.envrc`，也不要求安装 `direnv`。在 ECC 主仓库中同步依赖：
 
 ```bash
 cd "$ECC_ROOT"
 nix develop
 uv sync --no-build-isolation-package ecc-dreamplace \
   --no-build-isolation-package ecc-tools-bin --verbose
-uv run ecc --version
+uv run --project "$ECC_ROOT" ecc --version
 ```
 
-两种环境不要混用；教程中的命令可以把 `ecc` 替换成 `uv run ecc`。
+如果没有 Nix，可以跳过 `nix develop`。后续命令把 `ecc` 替换为
+`uv run --project "$ECC_ROOT" ecc` 即可。
+
+### 2.2 可选：使用 ECC 主仓库的 release 环境
+
+只有在 `ECC_ROOT` 指向包含 `.envrc` 的 ECC 主仓库时，才使用该方式：
+
+```bash
+cd "$ECC_ROOT"
+test -f .envrc
+direnv allow
+direnv exec "$ECC_ROOT" ecc --version
+```
+
+如果没有 `.envrc`，回到 2.1 节使用 `uv run --project "$ECC_ROOT" ecc`。
 
 ### 2.3 检查 ICS55 PDK
 
