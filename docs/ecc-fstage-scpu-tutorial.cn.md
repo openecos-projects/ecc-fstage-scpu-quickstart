@@ -241,6 +241,8 @@ jq . runs/first/Synthesis_yosys/feature/Synthesis_stat.json
 ```
 
 如果 `Synthesis` 显示 `Success` 且 `output/` 中有非空网表，说明第一次综合闭环已完成。
+当前 `syn_sta` 流程不会执行布局布线，因此不会生成 GDS；`*_Synthesis_sim.v.gz` 是
+网表级仿真输入，不是 GDS 文件。
 
 ## 6. 做一次独立实验
 

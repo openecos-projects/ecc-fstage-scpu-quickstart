@@ -38,7 +38,7 @@ source scripts/install-release-deps.sh
 ## 结果
 
 运行结果保存在 `runs/first/`。成功时，`Synthesis` 步骤为 `Success`，并生成综合网表
-和报告：
+和报告。当前流程停在 Yosys 综合/网表检查阶段，不会生成 GDS：
 
 ```text
 runs/first/Synthesis_yosys/
