@@ -55,6 +55,9 @@ source scripts/install-release-deps.sh
 `source` 会在当前终端执行脚本，而不是启动一个执行完即退出的子进程。这样脚本设置的
 `ECC_BIN` 才会留在当前 shell 中。
 
+下载过程在脚本内部的子 shell 中执行。即使平台检查或下载失败，脚本也只返回非零状态，
+不会退出正在使用的 Bash；成功时才把生成的环境文件加载回当前 shell。
+
 脚本依次完成以下动作：
 
 1. 检查 Linux x86_64 平台和 `curl`、`tar`、`git`、`make`、`bzip2`、`sha256sum` 等基础命令。
