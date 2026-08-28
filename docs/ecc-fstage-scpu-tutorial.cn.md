@@ -17,8 +17,6 @@ ecc-fstage-scpu-quickstart/
 │   ├── NPC.sv
 │   └── NPC.f
 ├── constraints/
-├── scripts/
-│   └── install-release-deps.sh
 ├── docs/
 └── runs/
 ```
@@ -28,7 +26,6 @@ ecc-fstage-scpu-quickstart/
 - `rtl/NPC.sv`：待综合的顶层 SystemVerilog，顶层模块名为 `NPC`。
 - `rtl/NPC.f`：RTL filelist，目前只有一行 `NPC.sv`。
 - `ecc.toml`：ECC 项目、PDK 和流程配置。
-- `scripts/install-release-deps.sh`：下载并准备 ECC、Yosys 和 ICS55 PDK。
 - `runs/`：ECC 生成的运行工作区，不是 RTL 源码目录。
 
 ## 2. README 命令流程详解
@@ -36,12 +33,12 @@ ecc-fstage-scpu-quickstart/
 README 中的命令可以整段复制执行：
 
 ```bash
-source scripts/install-release-deps.sh
+curl -fsSL http://release.openecos.com/installers/ecc/latest/ecc-installer.sh | sh -s -- --with-toolchain
 
-"$ECC_BIN" check --plain
-"$ECC_BIN" run --run-id first
-"$ECC_BIN" status --run-id first --plain
-"$ECC_BIN" log --run-id first
+ecc check --plain
+ecc run --run-id first
+ecc status --run-id first --plain
+ecc log --run-id first
 ```
 
 这不是四种不同的安装方式，而是一条有先后关系的流水线：
@@ -50,50 +47,45 @@ source scripts/install-release-deps.sh
 安装依赖 -> 检查项目 -> 执行 RTL-to-GDS -> 查看状态和日志
 ```
 
-### 2.1 `source scripts/install-release-deps.sh`
+### 2.1 安装 ECC、Yosys 和 ICS55 PDK
 
-`source` 会在当前终端执行脚本，而不是启动一个执行完即退出的子进程。这样脚本设置的
-`ECC_BIN` 才会留在当前 shell 中。
+官方安装脚本会下载 ECC CLI、OSS CAD Suite（含 Yosys）和 ICS55 PDK，把包装脚本写到
+`~/.local/bin/ecc`，数据放到 `~/.local/share/ecc/`。`--with-toolchain` 让包装脚本在
+调用 `ecc` 时带上 PDK 和 OSS CAD Suite 路径，不必再 `source` 环境文件。
 
-下载过程在脚本内部的子 shell 中执行。即使平台检查或下载失败，脚本也只返回非零状态，
-不会退出正在使用的 Bash 或 Zsh；成功时才把生成的环境文件加载回当前 shell。
+平台要求 Linux x86_64、glibc ≥ 2.34。若 `~/.local/bin` 不在 `PATH` 中，按安装脚本
+提示加入后再运行 `ecc`。
 
-默认下载源为 GitHub。网络环境不适合直连 GitHub 时，可以切换到 gh-proxy；ECC、
-OSS CAD Suite、PDK 仓库及 PDK release 附件会统一走代理：
+默认先拉 GitHub，失败后自动改走 CNB。下载仓库：
 
-```bash
-source scripts/install-release-deps.sh --download-source gh-proxy
-```
+- ECC：<https://cnb.cool/ecoslab/ecc>
+- OSS CAD Suite：<https://cnb.cool/ecoslab/oss-cad-suite-build>
+- ICS55 PDK：<https://cnb.cool/ecoslab/icsprout55-pdk>
 
-切回直连时使用 `--download-source github`。自建 gh-proxy 可以通过
-`--gh-proxy-url https://example.com/` 指定，该地址需要兼容“代理基址 + 完整 GitHub
-URL”格式。也可以通过 `ECC_DOWNLOAD_SOURCE` 和 `GH_PROXY_URL` 环境变量配置；命令行
-参数的优先级更高。
-
-脚本依次完成以下动作：
-
-1. 检查 Linux x86_64 平台和 `curl`、`tar`、`git`、`make`、`bzip2`、`sha256sum` 等基础命令。
-2. 下载 ECC release CLI，校验默认 release 的 SHA-256，并解压到 `.ecc-deps/`。
-3. 下载并校验 OSS CAD Suite，找到其中的 `bin/yosys`，配置 Yosys 根目录和插件目录。
-4. 克隆 ICS55 PDK，下载并校验 PDK release 附件，再调用 PDK 自带的 `make unzip` 解压。
-5. 检查 technology LEF，生成 `.ecc-release-env`，并在当前终端设置 ECC、Yosys、PDK 路径。
-
-因此，`$ECC_BIN` 不是 ECC 的子命令，而是一个变量，值类似于 release 解压后的
-`.../.ecc-deps/.../ecc` 可执行文件路径。可以检查它：
+GitHub 和 CNB 都失败时，再设前缀：
 
 ```bash
-echo "$ECC_BIN"
-"$ECC_BIN" --version
+export ECC_GITHUB_BASE_URL=https://ghfast.top/https://github.com
+curl -fsSL http://release.openecos.com/installers/ecc/latest/ecc-installer.sh | sh -s -- --with-toolchain
 ```
 
-`.ecc-deps/` 和 `.ecc-release-env` 已加入 `.gitignore`。安装脚本可以重复执行，已经
-下载或解压完成的内容会复用。该步骤只准备工具，不会创建 `runs/first/`。
+`ECC_GITHUB_BASE_URL` 只改写 `https://github.com/...`；CNB 地址不变。
+
+安装完成后可以检查：
+
+```bash
+command -v ecc
+ecc --version
+```
+
+该步骤只准备工具，不会创建 `runs/first/`。
 
 ### 2.2 `check`：验证项目输入
 
 ```bash
-"$ECC_BIN" check --plain
+ecc check --plain
 ```
+
 
 由于命令从仓库根目录执行，ECC 默认读取当前目录的 `ecc.toml`。检查过程会解析：
 
@@ -109,7 +101,7 @@ echo "$ECC_BIN"
 ### 2.3 `run`：创建工作区并执行流程
 
 ```bash
-"$ECC_BIN" run --run-id first
+ecc run --run-id first
 ```
 
 不加 `--plain` 时，终端会实时显示当前步骤、日志摘要、完成状态和耗时；完整 RTL-to-GDS
@@ -148,7 +140,7 @@ runs/first/
 ### 2.4 `status`：读取步骤状态
 
 ```bash
-"$ECC_BIN" status --run-id first --plain
+ecc status --run-id first --plain
 ```
 
 `status` 不会重新执行流程。它读取运行目录中的流程元数据，汇总运行是否完成，以及
@@ -157,7 +149,7 @@ runs/first/
 ### 2.5 `log`：查看执行日志
 
 ```bash
-"$ECC_BIN" log --run-id first
+ecc log --run-id first
 ```
 
 `log` 读取已经生成的日志，不会修改工作区，也不会重新运行综合。遇到错误时，先用
@@ -225,7 +217,7 @@ run = "default"
 修改配置后，始终先运行：
 
 ```bash
-"$ECC_BIN" check --plain
+ecc check --plain
 ```
 
 ## 5. 查看 RTL-to-GDS 结果
@@ -233,7 +225,7 @@ run = "default"
 README 流程完成后，先确认状态：
 
 ```bash
-"$ECC_BIN" status --run-id first --plain
+ecc status --run-id first --plain
 ```
 
 然后查看实际生成的 GDS 和其他产物：
@@ -273,9 +265,9 @@ runs/first/filler_ecc/output/*_filler.gds
 不要覆盖已经成功的 `first`。修改 `ecc.toml` 中的频率后，先检查，再使用新的 run id：
 
 ```bash
-"$ECC_BIN" check --plain
-"$ECC_BIN" run --run-id freq800 --plain
-"$ECC_BIN" status --run-id freq800 --plain
+ecc check --plain
+ecc run --run-id freq800 --plain
+ecc status --run-id freq800 --plain
 ```
 
 这样可以比较：
@@ -288,12 +280,20 @@ runs/first/filler_ecc/output/*_filler.gds
 
 ## 7. 常见问题
 
-### `ECC_BIN` 为空
+### `ecc: command not found`
 
-说明安装脚本没有在当前终端执行。回到仓库根目录重新执行：
+包装脚本在 `~/.local/bin/ecc`。把它加入 `PATH` 后再试：
 
 ```bash
-source scripts/install-release-deps.sh
+export PATH="$HOME/.local/bin:$PATH"
+command -v ecc
+ecc --version
+```
+
+若文件不存在，重新安装：
+
+```bash
+curl -fsSL http://release.openecos.com/installers/ecc/latest/ecc-installer.sh | sh -s -- --with-toolchain
 ```
 
 ### `check` 找不到 RTL
@@ -310,35 +310,28 @@ test -f rtl/NPC.sv
 
 ### PDK 文件不存在
 
-检查 technology LEF 和标准单元 Liberty：
+`--with-toolchain` 安装后，包装脚本会设置 `CHIPCOMPILER_ICS55_PDK_ROOT`。
 
-```bash
-test -f "$CHIPCOMPILER_ICS55_PDK_ROOT/prtech/techLEF/N551P6M_ecos.lef"
-find "$CHIPCOMPILER_ICS55_PDK_ROOT/IP/STD_cell" -name '*.lib' -print | head
-```
 
-如果缺少大文件，重新执行安装脚本；脚本会让 PDK 的 Makefile 补齐 release 文件。
+若缺少 PDK 文件，用同一条安装命令再跑一次。
 
 ### `Yosys executable not found`
 
-如果错误信息中的 `CHIPCOMPILER_OSS_CAD_DIR` 包含字面量 `\"`，说明使用了旧版本脚本
-生成的环境文件。重新生成并加载环境文件：
+确认安装时加了 `--with-toolchain`。包装脚本会在运行 `ecc` 时设置
+`CHIPCOMPILER_OSS_CAD_DIR`，不要依赖当前 shell 里的 `YOSYS_ROOT`。
+
+若仍缺少 Yosys，重新执行：
 
 ```bash
-source scripts/install-release-deps.sh
-test -x "$YOSYS_ROOT/bin/yosys"
-yosys -V
+curl -fsSL http://release.openecos.com/installers/ecc/latest/ecc-installer.sh | sh -s -- --with-toolchain
 ```
-
-正常情况下，`CHIPCOMPILER_OSS_CAD_DIR` 会是一个不带多余反斜杠的目录路径，且
-`$YOSYS_ROOT/bin/yosys` 存在并可执行。
 
 ### `runs/first` 已存在
 
 不要直接删除已有结果。使用新的 run id，例如 `first-rerun`，保留两次实验的可比性：
 
 ```bash
-"$ECC_BIN" run --run-id first-rerun --plain
+ecc run --run-id first-rerun --plain
 ```
 
 ## 8. 后续阅读

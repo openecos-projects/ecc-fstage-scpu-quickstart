@@ -13,8 +13,6 @@ ecc-fstage-scpu-quickstart/
 │   ├── NPC.sv               # 顶层 module NPC
 │   └── NPC.f                # RTL filelist
 ├── constraints/             # 约束扩展目录
-├── scripts/
-│   └── install-release-deps.sh # 一键下载 ECC、Yosys 和 ICS55 PDK
 ├── docs/
 │   ├── ecc-cli-guide.cn.md
 │   └── ecc-fstage-scpu-tutorial.cn.md
@@ -23,28 +21,37 @@ ecc-fstage-scpu-quickstart/
 
 ## 使用流程
 
-以下命令均在本仓库根目录执行。安装脚本会下载 ECC release、Yosys 和 ICS55 PDK，
-并在当前终端准备好运行环境。安装脚本支持 Bash 和 Zsh。
+以下命令均在本仓库根目录执行。先安装 ECC、OSS CAD Suite 和 ICS55 PDK（Linux
+x86_64，glibc ≥ 2.34）：
 
 ```bash
-source scripts/install-release-deps.sh
-
-"$ECC_BIN" check --plain
-"$ECC_BIN" run --run-id first
-"$ECC_BIN" status --run-id first --plain
-"$ECC_BIN" log --run-id first
+curl -fsSL http://release.openecos.com/installers/ecc/latest/ecc-installer.sh | sh -s -- --with-toolchain
 ```
 
-默认从 GitHub 下载。GitHub 连接较慢时，可以让所有 GitHub 下载和 PDK 克隆通过
-gh-proxy：
+安装脚本会把 `ecc` 写到 `~/.local/bin`。若该目录不在 `PATH` 中，按脚本提示加入后再执行：
 
 ```bash
-source scripts/install-release-deps.sh --download-source gh-proxy
+ecc check --plain
+ecc run --run-id first
+ecc status --run-id first --plain
+ecc log --run-id first
 ```
 
-切回直连时使用 `--download-source github`。自定义代理地址时追加
-`--gh-proxy-url https://example.com/`。也可以通过 `ECC_DOWNLOAD_SOURCE` 和
-`GH_PROXY_URL` 环境变量配置；命令行参数的优先级更高。
+默认先从 GitHub 下载；失败后会自动改走 CNB 镜像：
+
+- ECC：<https://cnb.cool/ecoslab/ecc>
+- OSS CAD Suite：<https://cnb.cool/ecoslab/oss-cad-suite-build>
+- ICS55 PDK：<https://cnb.cool/ecoslab/icsprout55-pdk>
+
+GitHub 和 CNB 都不可达时，再给 GitHub URL 加前缀：
+
+```bash
+export ECC_GITHUB_BASE_URL=https://ghfast.top/https://github.com
+curl -fsSL http://release.openecos.com/installers/ecc/latest/ecc-installer.sh | sh -s -- --with-toolchain
+```
+
+`--with-toolchain` 会让 `ecc` 包装脚本带上 OSS CAD Suite 和 ICS55 PDK 路径，无需再
+`source` 环境文件。
 
 ## 结果
 
