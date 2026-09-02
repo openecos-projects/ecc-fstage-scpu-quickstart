@@ -8,25 +8,35 @@
 
 ## 1. 安装与前置条件
 
-ECC 要求 Python 3.11 或更高版本，并依赖 Yosys、ECC-Tools、DreamPlace 以及 ICS55
-PDK。推荐使用 Nix 和 uv 管理环境：
+本快速上手仓库使用官方安装脚本，一次装好 ECC、OSS CAD Suite 和 ICS55 PDK。要求
+Linux x86_64、glibc ≥ 2.34：
 
 ```bash
-nix develop
-uv sync --no-build-isolation-package ecc-dreamplace \
-  --no-build-isolation-package ecc-tools-bin --verbose
-source .venv/bin/activate
+curl -fsSL http://release.openecos.com/installers/ecc/latest/ecc-installer.sh | sh -s -- --with-toolchain
 ```
 
-也可以不进入 Nix shell，直接在普通 shell 中执行 `uv sync`，然后用
-`uv run ecc ...` 运行。安装完成后，以下两种写法等价：
+包装脚本位于 `~/.local/bin/ecc`。若不在 `PATH` 中：
 
 ```bash
-ecc <command> ...
-uv run ecc <command> ...
+export PATH="$HOME/.local/bin:$PATH"
+ecc --version
 ```
 
-`nix run . -- <command> ...` 也可用于不激活虚拟环境的场景。
+默认先从 GitHub 下载，失败后自动改走 CNB：
+
+- ECC：<https://cnb.cool/ecoslab/ecc>
+- OSS CAD Suite：<https://cnb.cool/ecoslab/oss-cad-suite-build>
+- ICS55 PDK：<https://cnb.cool/ecoslab/icsprout55-pdk>
+
+两边都不可达时，再给 GitHub URL 加前缀：
+
+```bash
+export ECC_GITHUB_BASE_URL=https://ghfast.top/https://github.com
+curl -fsSL http://release.openecos.com/installers/ecc/latest/ecc-installer.sh | sh -s -- --with-toolchain
+```
+
+`--with-toolchain` 会让 `ecc` 在运行时带上 `CHIPCOMPILER_OSS_CAD_DIR` 和
+`CHIPCOMPILER_ICS55_PDK_ROOT`，一般不必再手动 `export`。
 
 ### PDK 路径
 
